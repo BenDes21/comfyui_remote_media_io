@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "comfyui_remote_media_io"
-version = "0.0.1"
+version = "0.0.2"
 description = "Load media (image/video/audio) from remote URL, and save results to remote storage."
 authors = [
   {name = "Ellis Shang", email = "you@gmail.com"}
@@ -38,7 +38,7 @@ Documentation = "https://github.com/shellishack/comfyui_remote_media_io/wiki"
 
 [tool.comfy]
 PublisherId = "shellishack"
-DisplayName = "comfyui_remote_media_io"
+DisplayName = "ComfyUI Remote Media IO"
 Icon = ""
 Tags = []
 Repository = "https://github.com/shellishack/comfyui_remote_media_io"
