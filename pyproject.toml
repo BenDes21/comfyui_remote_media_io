@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "comfyui_remote_media_io"
-version = "0.0.2"
+version = "0.0.4"
 description = "Load media (image/video/audio) from remote URL, and save results to remote storage."
 authors = [
   {name = "Ellis Shang", email = "you@gmail.com"}
@@ -13,9 +13,7 @@ readme = "README.md"
 license = {text = "MIT license"}
 requires-python = ">=3.10"
 classifiers = []
-dependencies = [
-
-]
+dependencies = []
 
 
 
@@ -27,7 +25,8 @@ dev = [
     "pre-commit", # runs linting on commit
     "pytest",  # testing
     "ruff",  # linting
-    "Pillow",
+    "azure-identity",
+    "azure-storage-blob"
 ]
 
 [project.urls]
