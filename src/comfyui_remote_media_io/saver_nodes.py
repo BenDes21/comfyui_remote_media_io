@@ -86,13 +86,12 @@ class SaveImageToRemote:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("URL",)
+    RETURN_TYPES = ()
     DESCRIPTION = cleandoc(__doc__)
     FUNCTION = "save_image"
 
     OUTPUT_NODE = True
-    # OUTPUT_TOOLTIPS = ("",) # Tooltips for the output node
+    OUTPUT_TOOLTIPS = ("Remote image URL",)  # Tooltips for the output node
 
     CATEGORY = "image"
 
@@ -140,9 +139,11 @@ class SaveImageToRemote:
             print("Error uploading to Azure Blob Storage:", e)
             raise e
 
-        return (
-            f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net/{os.getenv('AZURE_STORAGE_CONTAINER')}/{filename}",
+        result_url = (
+            f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net/{os.getenv('AZURE_STORAGE_CONTAINER')}/{filename}"
         )
+
+        return {"ui": {"urls": (result_url,)}}
 
 
 class SaveVideoToRemote:
@@ -181,13 +182,13 @@ class SaveVideoToRemote:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("URL",)
+    RETURN_TYPES = ()
     DESCRIPTION = cleandoc(__doc__)
     FUNCTION = "save_video"
     CATEGORY = "image/video"
 
     OUTPUT_NODE = True
+    OUTPUT_TOOLTIPS = ("Remote video URL",)  # Tooltips for the output node
 
     def save_video(self, video, filename):
         format = filename.split(".")[-1].lower()
@@ -215,9 +216,13 @@ class SaveVideoToRemote:
             file.close()
             os.remove(output_path)
 
-        return (
-            f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net/{os.getenv('AZURE_STORAGE_CONTAINER')}/{filename}",
+        result_url = (
+            f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net/{os.getenv('AZURE_STORAGE_CONTAINER')}/{filename}"
         )
+
+        return {
+            "ui": {"urls": (result_url,)},
+        }
 
 
 class SaveAudioToRemote:
@@ -276,13 +281,13 @@ class SaveAudioToRemote:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("URL",)
+    RETURN_TYPES = ()
     DESCRIPTION = cleandoc(__doc__)
     FUNCTION = "save_audio"
     CATEGORY = "audio"
 
     OUTPUT_NODE = True
+    OUTPUT_TOOLTIPS = ("Remote audio URL",)  # Tooltips for the output node
 
     def save_audio(
         self,
@@ -384,6 +389,10 @@ class SaveAudioToRemote:
                 file.close()
                 os.remove(output_path)
 
-        return (
-            f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net/{os.getenv('AZURE_STORAGE_CONTAINER')}/{filename}",
+        result_url = (
+            f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net/{os.getenv('AZURE_STORAGE_CONTAINER')}/{filename}"
         )
+
+        return {
+            "ui": {"urls": (result_url,)},
+        }
