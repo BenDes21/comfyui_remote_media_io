@@ -1,14 +1,23 @@
-"""Top-level package for comfyui_remote_media_io."""
+# Fichier __init__.py pour comfyui-bunny-uploader (version de test minimaliste)
 
-__all__ = [
-    "NODE_CLASS_MAPPINGS",
-    "NODE_DISPLAY_NAME_MAPPINGS",
+class BunnyCDNUploadVideo:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"media_file": ("*",)}}
     
-]
+    RETURN_TYPES = ()
+    FUNCTION = "do_nothing"
+    CATEGORY = "BunnyCDN_Test"
+    OUTPUT_NODE = True
 
-__author__ = """Ellis Shang"""
-__email__ = "you@gmail.com"
-__version__ = "0.0.1"
+    def do_nothing(self, media_file):
+        print("--- LE NOEUD FACTICE BunnyCDNUploadVideo A ÉTÉ EXÉCUTÉ ---")
+        return {} # Ne fait absolument rien
 
-from .src.comfyui_remote_media_io.nodes import NODE_CLASS_MAPPINGS
-from .src.comfyui_remote_media_io.nodes import NODE_DISPLAY_NAME_MAPPINGS
+# Enregistrement
+NODE_CLASS_MAPPINGS = {
+    "BunnyCDNUploadVideo": BunnyCDNUploadVideo
+}
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "BunnyCDNUploadVideo": "BunnyCDN Upload Video (TEST)"
+}
