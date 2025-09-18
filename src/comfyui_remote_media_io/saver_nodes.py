@@ -1,3 +1,11 @@
+# (Laissez le code original d'Azure au début du fichier)
+# ...
+# Collez ce bloc corrigé à la fin du fichier
+
+import os
+import requests
+# NOTE : 'import folder_paths' a été retiré d'ici
+
 class BunnyCDNUploadVideo:
     """
     Node to upload a video (or any file) from a ComfyUI workflow to BunnyCDN Storage.
@@ -21,9 +29,6 @@ class BunnyCDNUploadVideo:
     RETURN_NAMES = ("bunny_cdn_url",)
     FUNCTION = "upload_video"
     CATEGORY = "BunnyCDN"
-    
-    # --- LA CORRECTION EST ICI ---
-    # On dit à ComfyUI que ce nœud est une sortie finale du workflow.
     OUTPUT_NODE = True
 
     def get_bunny_hostname(self, region: str) -> str:
@@ -37,9 +42,13 @@ class BunnyCDNUploadVideo:
         return regions.get(region, "storage.bunnycdn.com")
 
     def upload_video(self, media_file: dict, storage_zone_name: str, access_key: str, storage_zone_region: str, remote_path: str, remote_filename_prefix: str = ""):
+        # --- LA CORRECTION EST ICI ---
+        # On importe folder_paths seulement au moment de l'exécution.
+        import folder_paths
+        
         if not isinstance(media_file, dict) or 'filename' not in media_file or 'type' not in media_file:
             print("Données d'entrée invalides...")
-            return ("",)
+            return {"ui": {"bunny_cdn_url": [""]}}
 
         filename = media_file['filename']
         subfolder = media_file.get('subfolder', '')
@@ -47,7 +56,7 @@ class BunnyCDNUploadVideo:
 
         if not os.path.exists(local_filepath):
             print(f"Fichier non trouvé : {local_filepath}")
-            return ("",)
+            return {"ui": {"bunny_cdn_url": [""]}}
             
         remote_full_path = os.path.join(remote_path, f"{remote_filename_prefix}{filename}").replace("\\", "/")
         hostname = self.get_bunny_hostname(storage_zone_region)
@@ -61,13 +70,11 @@ class BunnyCDNUploadVideo:
             
             if response.status_code not in [201, 200]:
                 print(f"Échec de l'envoi vers Bunny CDN. Statut : {response.status_code}, Réponse : {response.text}")
-                # Nous allons retourner un dictionnaire de sortie vide pour éviter le crash
                 return {"ui": {"bunny_cdn_url": [""]}}
 
             public_url = f"https://{storage_zone_name}.b-cdn.net/{remote_full_path}"
             print(f"Envoi réussi ! URL : {public_url}")
             
-            # Le format de sortie pour un OUTPUT_NODE doit être un dictionnaire
             return {"ui": {"bunny_cdn_url": [public_url]}}
 
         except requests.exceptions.RequestException as e:
