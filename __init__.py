@@ -1,8 +1,9 @@
-# Fichier __init__.py pour comfyui-bunny-uploader (Version FINALE)
+# Fichier __init__.py pour comfyui-bunny-uploader (Version FINALE CORRIGÉE)
 
 import os
 import requests
 
+# Tente d'importer folder_paths. S'il n'est pas prêt, on l'importera plus tard.
 try:
     import folder_paths
 except ImportError:
@@ -38,32 +39,55 @@ class BunnyCDNUploadVideo:
         }
         return regions.get(region, "storage.bunnycdn.com")
 
-    def upload_video(self, media_file: dict, storage_zone_name: str, access_key: str, storage_zone_region: str, remote_path: str, remote_filename_prefix: str = ""):
+    def upload_video(self, media_file: any, storage_zone_name: str, access_key: str, storage_zone_region: str, remote_path: str, remote_filename_prefix: str = ""):
+        # On s'assure que folder_paths est bien importé
         global folder_paths
         if folder_paths is None:
             import folder_paths
         
-        if not isinstance(media_file, dict) or 'filename' not in media_file or 'type' not in media_file:
-            print("Données d'entrée invalides...")
+        # --- CORRECTION FINALE : Gestion de l'entrée ---
+        # On rend le code plus robuste. Si media_file est une liste (cas courant pour les sorties vidéo), on prend le premier élément.
+        if isinstance(media_file, list):
+            if len(media_file) == 0:
+                print("Données d'entrée invalides : la liste media_file est vide.")
+                return {"ui": {"bunny_cdn_url": [""]}}
+            media_info = media_file[0]
+        else:
+            media_info = media_file
+
+        if not isinstance(media_info, dict) or 'filename' not in media_info or 'type' not in media_info:
+            print(f"Données d'entrée invalides. Reçu un objet de type {type(media_info)} au lieu d'un dictionnaire attendu.")
+            print(f"Contenu reçu : {media_info}")
             return {"ui": {"bunny_cdn_url": [""]}}
 
-        filename = media_file['filename']
-        subfolder = media_file.get('subfolder', '')
-        # --- CORRECTION IMPORTANTE ---
-        # Le type de media_file est différent pour les vidéos. Il faut chercher dans le bon dossier.
-        if media_file.get('type') == 'output':
+        filename = media_info['filename']
+        subfolder = media_info.get('subfolder', '')
+        
+        # Logique de recherche de fichier améliorée pour s'adapter à l'environnement serverless
+        if media_info.get('type') == 'output':
              local_filepath = os.path.join(folder_paths.get_output_directory(), subfolder, filename)
         else:
-             # Fallback pour d'autres types de fichiers si nécessaire
+             # Fallback pour d'autres types de fichiers (comme les previews temporaires)
              local_filepath = os.path.join(folder_paths.get_temp_directory(), subfolder, filename)
 
         if not os.path.exists(local_filepath):
-            # Tentative de recherche dans l'autre dossier au cas où
-            other_path = os.path.join(folder_paths.get_output_directory(), subfolder, filename)
-            if os.path.exists(other_path):
-                local_filepath = other_path
-            else:
-                print(f"Fichier non trouvé dans les dossiers de sortie/temporaires : {local_filepath}")
+            # En serverless, les fichiers peuvent parfois se retrouver dans l'un ou l'autre des dossiers.
+            # On tente donc une recherche exhaustive.
+            search_paths = [
+                folder_paths.get_output_directory(),
+                folder_paths.get_temp_directory(),
+                folder_paths.get_input_directory() # Au cas où
+            ]
+            found = False
+            for path in search_paths:
+                potential_path = os.path.join(path, subfolder, filename)
+                if os.path.exists(potential_path):
+                    local_filepath = potential_path
+                    found = True
+                    break
+            
+            if not found:
+                print(f"Fichier non trouvé dans les dossiers de sortie/temporaires : {filename}")
                 return {"ui": {"bunny_cdn_url": [""]}}
             
         remote_full_path = os.path.join(remote_path, f"{remote_filename_prefix}{filename}").replace("\\", "/")
@@ -72,7 +96,7 @@ class BunnyCDNUploadVideo:
         headers = { "AccessKey": access_key, "Content-Type": "application/octet-stream" }
 
         try:
-            print(f"Tentative d'envoi de {local_filepath} vers {api_url}...")
+            print(f"Tentative d'envoi de '{local_filepath}' vers '{api_url}'...")
             with open(local_filepath, 'rb') as f:
                 response = requests.put(api_url, data=f, headers=headers)
             
@@ -88,6 +112,9 @@ class BunnyCDNUploadVideo:
 
         except requests.exceptions.RequestException as e:
             print(f"Erreur de connexion lors de l'envoi vers Bunny CDN : {e}")
+            return {"ui": {"bunny_cdn_url": [""]}}
+        except FileNotFoundError:
+            print(f"Erreur fatale : Fichier non trouvé au moment de l'ouverture : {local_filepath}")
             return {"ui": {"bunny_cdn_url": [""]}}
 
 # Enregistrement
