@@ -41,40 +41,34 @@ class BunnyCDNUploadVideo:
         if folder_paths is None:
             import folder_paths
         
-        # --- DÉBUT DE LA CORRECTION ---
-        # Cette nouvelle logique est plus intelligente pour trouver le nom du fichier.
-        
         filename = None
-        # Cas 1: L'entrée est une liste (comportement typique de l'UI de Comfy)
-        if isinstance(media_file, list) and len(media_file) > 0:
-            media_info = media_file[0]
+        local_filepath = None
+        media_info = media_file
+
+        if isinstance(media_info, list) and len(media_info) > 0:
+            media_info = media_info[0]
+
+        try:
+            # Méthode 1: Essayer de le traiter comme un dictionnaire (format standard de ComfyUI)
             if isinstance(media_info, dict) and 'filename' in media_info:
-                filename = media_info.get('filename')
+                filename = media_info['filename']
                 subfolder = media_info.get('subfolder', '')
                 file_type = media_info.get('type', 'output')
+                if file_type == 'output':
+                    local_filepath = os.path.join(folder_paths.get_output_directory(), subfolder, filename)
+                else:
+                    local_filepath = os.path.join(folder_paths.get_temp_directory(), subfolder, filename)
+            else:
+                # Méthode 2: Essayer de le traiter comme une liste/tuple contenant le chemin complet (sortie du node CreateVideo)
+                full_path = media_info[0]
+                if isinstance(full_path, str) and os.path.exists(full_path):
+                    local_filepath = full_path
+                    filename = os.path.basename(full_path)
+        except (TypeError, IndexError, KeyError):
+            pass # Si les tentatives échouent, on passera à la vérification finale
 
-        # Cas 2: L'entrée vient directement d'un node comme CreateVideo (tuple ou autre)
-        # On essaie d'extraire le premier élément s'il ressemble à un nom de fichier.
-        elif isinstance(media_file, (list, tuple)) and len(media_file) > 0 and isinstance(media_file[0], str):
-             filename = media_file[0]
-             subfolder = ""
-             file_type = "output" # Les vidéos sont généralement dans le dossier de sortie
-
-        # Si on n'a toujours pas trouvé, on affiche une erreur claire
-        if filename is None:
-            print(f"Erreur : Impossible d'extraire le nom de fichier depuis l'entrée de type {type(media_file)}")
-            return {"ui": {"bunny_cdn_url": [""]}}
-            
-        print(f"Fichier identifié : {filename}, type: {file_type}, sous-dossier: {subfolder}")
-
-        if file_type == 'output':
-             local_filepath = os.path.join(folder_paths.get_output_directory(), subfolder, filename)
-        else:
-             local_filepath = os.path.join(folder_paths.get_temp_directory(), subfolder, filename)
-        # --- FIN DE LA CORRECTION ---
-
-        if not os.path.exists(local_filepath):
-            print(f"Fichier non trouvé à l'emplacement attendu : {local_filepath}")
+        if not local_filepath or not os.path.exists(local_filepath):
+            print(f"Erreur : Impossible de déterminer le chemin du fichier local depuis l'entrée de type {type(media_info)}")
             return {"ui": {"bunny_cdn_url": [""]}}
             
         remote_full_path = os.path.join(remote_path, f"{remote_filename_prefix}{filename}").replace("\\", "/")
