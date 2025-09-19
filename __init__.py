@@ -28,7 +28,7 @@ class BunnyCDNUploadVideo:
     CATEGORY = "BunnyCDN"
     OUTPUT_NODE = True
 
-    def get_bunny_hostname(self, region: str) -> str:
+    def get_bunny_hostname(self, region: str):
         regions = {
             "Falkenstein": "storage.bunnycdn.com", "New York": "ny.storage.bunnycdn.com",
             "Los Angeles": "la.storage.bunnycdn.com", "Singapore": "sg.storage.bunnycdn.com",
@@ -36,45 +36,47 @@ class BunnyCDNUploadVideo:
         }
         return regions.get(region, "storage.bunnycdn.com")
 
-    def upload_video(self, media_file: any, storage_zone_name: str, access_key: str, storage_zone_region: str, remote_path: str, remote_filename_prefix: str = ""):
-        # Import folder_paths dynamically if it wasn't available at the module level
+    def upload_video(self, media_file, storage_zone_name, access_key, storage_zone_region, remote_path, remote_filename_prefix=""):
         global folder_paths
         if folder_paths is None:
             import folder_paths
         
-        # Handle cases where media_file is a list
-        if isinstance(media_file, list):
-            if len(media_file) == 0:
-                print("Données d'entrée invalides : la liste media_file est vide.")
-                return {"ui": {"bunny_cdn_url": [""]}}
-            media_info = media_file[0]
-        else:
-            media_info = media_file
-
-        # Validate that media_info is a dictionary with the expected keys
-        if not isinstance(media_info, dict) or 'filename' not in media_info or 'type' not in media_info:
-            print(f"Données d'entrée invalides. Reçu un objet de type {type(media_info)} au lieu d'un dictionnaire attendu.")
-            return {"ui": {"bunny_cdn_url": [""]}}
-
-        filename = media_info['filename']
-        subfolder = media_info.get('subfolder', '')
+        # --- DÉBUT DE LA CORRECTION ---
+        # Cette nouvelle logique est plus intelligente pour trouver le nom du fichier.
         
-        # Determine the full local path of the file
-        if media_info.get('type') == 'output':
+        filename = None
+        # Cas 1: L'entrée est une liste (comportement typique de l'UI de Comfy)
+        if isinstance(media_file, list) and len(media_file) > 0:
+            media_info = media_file[0]
+            if isinstance(media_info, dict) and 'filename' in media_info:
+                filename = media_info.get('filename')
+                subfolder = media_info.get('subfolder', '')
+                file_type = media_info.get('type', 'output')
+
+        # Cas 2: L'entrée vient directement d'un node comme CreateVideo (tuple ou autre)
+        # On essaie d'extraire le premier élément s'il ressemble à un nom de fichier.
+        elif isinstance(media_file, (list, tuple)) and len(media_file) > 0 and isinstance(media_file[0], str):
+             filename = media_file[0]
+             subfolder = ""
+             file_type = "output" # Les vidéos sont généralement dans le dossier de sortie
+
+        # Si on n'a toujours pas trouvé, on affiche une erreur claire
+        if filename is None:
+            print(f"Erreur : Impossible d'extraire le nom de fichier depuis l'entrée de type {type(media_file)}")
+            return {"ui": {"bunny_cdn_url": [""]}}
+            
+        print(f"Fichier identifié : {filename}, type: {file_type}, sous-dossier: {subfolder}")
+
+        if file_type == 'output':
              local_filepath = os.path.join(folder_paths.get_output_directory(), subfolder, filename)
         else:
              local_filepath = os.path.join(folder_paths.get_temp_directory(), subfolder, filename)
+        # --- FIN DE LA CORRECTION ---
 
-        # Fallback check in case the file is not in the expected directory
         if not os.path.exists(local_filepath):
-            other_path = os.path.join(folder_paths.get_output_directory(), subfolder, filename)
-            if os.path.exists(other_path):
-                local_filepath = other_path
-            else:
-                print(f"Fichier non trouvé dans les dossiers de sortie/temporaires : {filename}")
-                return {"ui": {"bunny_cdn_url": [""]}}
+            print(f"Fichier non trouvé à l'emplacement attendu : {local_filepath}")
+            return {"ui": {"bunny_cdn_url": [""]}}
             
-        # Construct the remote URL for Bunny CDN
         remote_full_path = os.path.join(remote_path, f"{remote_filename_prefix}{filename}").replace("\\", "/")
         hostname = self.get_bunny_hostname(storage_zone_region)
         api_url = f"https://{hostname}/{storage_zone_name}/{remote_full_path}"
@@ -85,7 +87,6 @@ class BunnyCDNUploadVideo:
             with open(local_filepath, 'rb') as f:
                 response = requests.put(api_url, data=f, headers=headers)
             
-            # Check for a successful upload
             if response.status_code not in [201, 200]:
                 print(f"Échec de l'envoi vers Bunny CDN. Statut : {response.status_code}, Réponse : {response.text}")
                 return {"ui": {"bunny_cdn_url": [""]}}
@@ -102,7 +103,7 @@ class BunnyCDNUploadVideo:
             print(f"Erreur fatale : Fichier non trouvé au moment de l'ouverture : {local_filepath}")
             return {"ui": {"bunny_cdn_url": [""]}}
 
-# Register the node with ComfyUI
+
 NODE_CLASS_MAPPINGS = {
     "BunnyCDNUploadVideo": BunnyCDNUploadVideo
 }
