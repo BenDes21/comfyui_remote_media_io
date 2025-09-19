@@ -96,17 +96,3 @@ class BunnyCDNUploadVideo:
         except FileNotFoundError:
             print(f"Erreur fatale : Fichier non trouvé au moment de l'ouverture : {local_filepath}")
             return {"ui": {"bunny_cdn_url": [""]}}
-
-# Enregistrement
-NODE_CLASS_MAPPINGS = {
-    "BunnyCDNUploadVideo": BunnyCDNUploadVideo
-}
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "BunnyCDNUploadVideo": "BunnyCDN Upload Video"
-}```
-4.  **Commitez** ce changement.
-5.  **Modifiez votre `Dockerfile`** sur votre dépôt principal et changez `ARG CACHE_BUSTER` à la version suivante.
-6.  **Commitez** le changement du Dockerfile.
-7.  Lancez la requête.
-
-Cette fois, tout fonctionnera. Vous n'avez plus besoin de m'envoyer les logs. Vous recevrez une réponse de succès avec l'URL de votre vidéo. **Vous avez réussi.**
