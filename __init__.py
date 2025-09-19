@@ -1,5 +1,6 @@
 import os
 import requests
+import inspect
 
 try:
     import folder_paths
@@ -11,7 +12,7 @@ class BunnyCDNUploadVideo:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "media_file": ("*",), 
+                "media_file": ("*",),
                 "storage_zone_name": ("STRING", {"default": "votre-zone-de-stockage"}),
                 "access_key": ("STRING", {"default": "votre-cle-d-acces-stockage", "multiline": True}),
                 "storage_zone_region": (["Falkenstein", "New York", "Los Angeles", "Singapore", "Sydney"],),
@@ -40,36 +41,51 @@ class BunnyCDNUploadVideo:
         global folder_paths
         if folder_paths is None:
             import folder_paths
+
+        # --- DÉBUT DE LA CORRECTION DÉFINITIVE ---
         
-        filename = None
-        local_filepath = None
-        media_info = media_file
-
-        if isinstance(media_info, list) and len(media_info) > 0:
-            media_info = media_info[0]
-
+        # Pour le débogage, affichons ce que nous recevons réellement
+        print(f"DEBUG: Type de media_file reçu : {type(media_file)}")
         try:
-            # Méthode 1: Essayer de le traiter comme un dictionnaire (format standard de ComfyUI)
-            if isinstance(media_info, dict) and 'filename' in media_info:
-                filename = media_info['filename']
-                subfolder = media_info.get('subfolder', '')
-                file_type = media_info.get('type', 'output')
+            # Affiche les attributs de l'objet pour nous aider à comprendre sa structure
+            print(f"DEBUG: Attributs de l'objet : {dir(media_file)}")
+        except:
+            pass
+            
+        local_filepath = None
+        filename = None
+        
+        # Tentative 1: Traiter comme un dictionnaire (format standard de ComfyUI)
+        try:
+            if isinstance(media_file, list): media_file = media_file[0]
+            if 'filename' in media_file:
+                filename = media_file['filename']
+                subfolder = media_file.get('subfolder', '')
+                file_type = media_file.get('type', 'output')
                 if file_type == 'output':
                     local_filepath = os.path.join(folder_paths.get_output_directory(), subfolder, filename)
                 else:
                     local_filepath = os.path.join(folder_paths.get_temp_directory(), subfolder, filename)
-            else:
-                # Méthode 2: Essayer de le traiter comme une liste/tuple contenant le chemin complet (sortie du node CreateVideo)
-                full_path = media_info[0]
-                if isinstance(full_path, str) and os.path.exists(full_path):
-                    local_filepath = full_path
-                    filename = os.path.basename(full_path)
-        except (TypeError, IndexError, KeyError):
-            pass # Si les tentatives échouent, on passera à la vérification finale
+        except (TypeError, KeyError):
+            print("DEBUG: L'entrée n'est pas un dictionnaire standard. Tentative suivante.")
 
+        # Tentative 2: Traiter comme une liste/tuple (format de sortie de certains nodes vidéo)
+        if not local_filepath:
+            try:
+                if isinstance(media_file, (list, tuple)):
+                    potential_path = media_file[0]
+                    if isinstance(potential_path, str) and os.path.exists(potential_path):
+                        local_filepath = potential_path
+                        filename = os.path.basename(local_filepath)
+            except (TypeError, IndexError):
+                print("DEBUG: L'entrée n'est pas une liste/tuple contenant un chemin. Dernière tentative.")
+
+        # Si rien n'a fonctionné, c'est qu'il y a un problème
         if not local_filepath or not os.path.exists(local_filepath):
-            print(f"Erreur : Impossible de déterminer le chemin du fichier local depuis l'entrée de type {type(media_info)}")
+            print(f"ERREUR FINALE: Impossible de déterminer le chemin du fichier local depuis l'entrée.")
             return {"ui": {"bunny_cdn_url": [""]}}
+
+        # --- FIN DE LA CORRECTION DÉFINITIVE ---
             
         remote_full_path = os.path.join(remote_path, f"{remote_filename_prefix}{filename}").replace("\\", "/")
         hostname = self.get_bunny_hostname(storage_zone_region)
@@ -86,7 +102,7 @@ class BunnyCDNUploadVideo:
                 return {"ui": {"bunny_cdn_url": [""]}}
 
             public_url = f"https://{storage_zone_name}.b-cdn.net/{remote_full_path}"
-            print(f"Envoi réussi ! URL : {public_url}")
+            print(f"SUCCÈS ! Envoi réussi ! URL : {public_url}")
             
             return {"ui": {"bunny_cdn_url": [public_url]}}
 
