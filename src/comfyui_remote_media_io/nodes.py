@@ -44,7 +44,7 @@ class BunnyCDNUploadVideo:
         # 2. Sauvegarde de la vidéo dans un fichier temporaire
         temp_dir = folder_paths.get_temp_directory()
         # Génère un nom de fichier unique pour éviter les conflits et les problèmes de nommage
-        filename = f"{remote_filename_prefix}{uuid.uuid4()}.mp4"
+        filename = f"{remote_filename_prefix}.mp4"
         local_filepath = os.path.join(temp_dir, filename)
 
         try:
